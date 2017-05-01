@@ -1,6 +1,8 @@
 package jp.co.skyweaver.speechtotext;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -12,66 +14,87 @@ import android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 
 import static android.speech.SpeechRecognizer.CONFIDENCE_SCORES;
+import static android.speech.SpeechRecognizer.ERROR_CLIENT;
 import static android.speech.SpeechRecognizer.ERROR_NO_MATCH;
+import static android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY;
 import static android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT;
 import static android.speech.SpeechRecognizer.RESULTS_RECOGNITION;
 
 public class MainActivity extends AppCompatActivity implements OnRequestPermissionsResultCallback {
 
-    private static final boolean DEBUG = false;
     private static final int MY_PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
-    private Button mButton;
+    private Boolean mFirst = true;
     private SpeechRecognizer mRecognizer;
+    private AlertDialog mDialog;
     private RecognitionListener mListener = new RecognitionListener() {
         @Override
         public void onReadyForSpeech(Bundle bundle) {
+            Log.d("DEV", "onReadyForSpeech");
 
         }
 
         @Override
         public void onBeginningOfSpeech() {
-            debugPrintLn("onBeginningOfSpeech");
+            Log.d("DEV", "onBeginningOfSpeech");
 
         }
 
         @Override
         public void onRmsChanged(float v) {
-//            debugPrintLn("onRmsChanged");
 
         }
 
         @Override
         public void onBufferReceived(byte[] bytes) {
-            debugPrintLn("onBufferReceived");
+            Log.d("DEV", "onBufferReceived");
         }
 
         @Override
         public void onEndOfSpeech() {
-            debugPrintLn("onEndOfSpeech");
+            Log.d("DEV", "onEndOfSpeech");
+            restart();
         }
 
         @Override
         public void onError(int errorCode) {
-            debugPrintLn("onError:" + errorCode);
+            Log.d("DEV", "onError:" + errorCode);
 
             switch (errorCode) {
                 case ERROR_NO_MATCH: // go through.
                 case ERROR_SPEECH_TIMEOUT:
-                    restart();
+                case ERROR_CLIENT:
+//                    restart();
+                    break;
+                case ERROR_RECOGNIZER_BUSY:
+                    break;
+//                    if (mDialog == null || !mDialog.isShowing()) {
+//                        mDialog =
+//                                new AlertDialog.Builder(MainActivity.this)
+//                                        .setMessage(R.string.message_need_restart_app)
+//                                        .setPositiveButton(android.R.string.ok,
+//                                                new DialogInterface.OnClickListener() {
+//                                                    @Override
+//                                                    public void onClick(DialogInterface dialogInterface, int i) {
+//                                                        MainActivity.this.finish();
+//                                                    }
+//                                                }).create();
+//                        mDialog.show();
+//                    }
+//                    break;
             }
         }
 
         @Override
         public void onResults(Bundle bundle) {
-            debugPrintLn("onResults:");
+            Log.d("DEV", "onResults:");
             ArrayList<String> texts = bundle.getStringArrayList(RESULTS_RECOGNITION);
             float[] confidents = bundle.getFloatArray(CONFIDENCE_SCORES);
 
@@ -86,64 +109,53 @@ public class MainActivity extends AppCompatActivity implements OnRequestPermissi
             }
 
             for (int i = 0; i < texts.size(); i++) {
-                debugPrintLn("" + i + ":" + confidents[i] + ":" + texts.get(i));
+                Log.d("DEV", "" + i + ":" + confidents[i] + ":" + texts.get(i));
             }
 
-            debugPrintLn("" + maxConfidenceIndex + ":" + confidents[maxConfidenceIndex] + ":" + texts.get(maxConfidenceIndex));
-            printLn(texts.get(maxConfidenceIndex));
+            Log.d("DEV", "" + maxConfidenceIndex + ":" + confidents[maxConfidenceIndex] + ":" + texts.get(maxConfidenceIndex));
+            if (mFirst) {
+                mHistoryText.setVisibility(View.VISIBLE);
+                mFirst = false;
+            } else {
+                mHistoryText.append("\n");
+            }
             mHistoryText.append(texts.get(maxConfidenceIndex));
             mOutput.setText("");
+            scrollToBottom();
             restart();
         }
 
         @Override
         public void onPartialResults(Bundle bundle) {
-            debugPrintLn("onPartialResults:");
+            Log.d("DEV", "onPartialResults:");
             ArrayList<String> texts = bundle.getStringArrayList(RESULTS_RECOGNITION);
 
-            if(TextUtils.isEmpty(texts.get(0)) ) {
+            if (TextUtils.isEmpty(texts.get(0))) {
                 return;
             }
 
             for (int i = 0; i < texts.size(); i++) {
-                debugPrintLn("" + i + ":" + texts.get(i));
+                Log.d("DEV", "" + i + ":" + texts.get(i));
             }
-            printLn(texts.get(0));
+            mOutput.setText(texts.get(0));
+            scrollToBottom();
         }
 
         @Override
         public void onEvent(int i, Bundle bundle) {
-            debugPrintLn("onEvent");
+            Log.d("DEV", "onEvent" + i);
         }
     };
     private TextView mHistoryText;
 
 
     private void restart() {
-        debugPrintLn("restart");
+        Log.d("DEV", "restart");
         mRecognizer.stopListening();
         mRecognizer.startListening(mIntent);
     }
 
     private ScrollView mScrollView;
-
-    private void printLn(String text) {
-        if (!DEBUG) {
-            mOutput.setText(text);
-            scrollToBottom();
-        } else {
-            mOutput.append("\n" + text);
-            scrollToBottom();
-        }
-    }
-
-    private void debugPrintLn(String text) {
-        if (!DEBUG) return;
-
-        mOutput.append("\n" + text);
-        scrollToBottom();
-    }
-
     private Intent mIntent;
     private TextView mOutput;
 
@@ -154,6 +166,7 @@ public class MainActivity extends AppCompatActivity implements OnRequestPermissi
 
         mOutput = (TextView) findViewById(R.id.text_output);
         mHistoryText = (TextView) findViewById(R.id.text_history);
+        mHistoryText.setVisibility(View.GONE);
         mScrollView = (ScrollView) findViewById(R.id.scroll_view);
         mScrollView.fullScroll(View.FOCUS_DOWN);
 
@@ -177,8 +190,6 @@ public class MainActivity extends AppCompatActivity implements OnRequestPermissi
 
 
         mRecognizer.startListening(mIntent);
-
-
 
 
     }
@@ -212,7 +223,7 @@ public class MainActivity extends AppCompatActivity implements OnRequestPermissi
         if (requestCode == MY_PERMISSIONS_REQUEST_RECORD_AUDIO) {
             if (grantResults.length != 1 ||
                     grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                debugPrintLn("permission denied.");
+                Log.d("DEV", "permission denied.");
             }
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);

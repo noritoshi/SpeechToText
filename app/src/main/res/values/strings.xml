@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">書記</string>
+    <string name="message_need_restart_app">エラーが発生しました。\nアプリを再起動してください</string>
 </resources>
