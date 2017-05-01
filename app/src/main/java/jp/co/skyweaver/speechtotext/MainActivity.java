@@ -10,7 +10,6 @@ import android.speech.SpeechRecognizer;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.View;
@@ -93,6 +92,7 @@ public class MainActivity extends AppCompatActivity implements OnRequestPermissi
             debugPrintLn("" + maxConfidenceIndex + ":" + confidents[maxConfidenceIndex] + ":" + texts.get(maxConfidenceIndex));
             printLn(texts.get(maxConfidenceIndex));
             mHistoryText.append(texts.get(maxConfidenceIndex));
+            mOutput.setText("");
             restart();
         }
 
@@ -129,10 +129,10 @@ public class MainActivity extends AppCompatActivity implements OnRequestPermissi
 
     private void printLn(String text) {
         if (!DEBUG) {
-            mText.setText(text);
+            mOutput.setText(text);
             scrollToBottom();
         } else {
-            mText.append("\n" + text);
+            mOutput.append("\n" + text);
             scrollToBottom();
         }
     }
@@ -140,19 +140,19 @@ public class MainActivity extends AppCompatActivity implements OnRequestPermissi
     private void debugPrintLn(String text) {
         if (!DEBUG) return;
 
-        mText.append("\n" + text);
+        mOutput.append("\n" + text);
         scrollToBottom();
     }
 
     private Intent mIntent;
-    private TextView mText;
+    private TextView mOutput;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mText = (TextView) findViewById(R.id.text_output);
+        mOutput = (TextView) findViewById(R.id.text_output);
         mHistoryText = (TextView) findViewById(R.id.text_history);
         mScrollView = (ScrollView) findViewById(R.id.scroll_view);
         mScrollView.fullScroll(View.FOCUS_DOWN);
@@ -222,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements OnRequestPermissi
     private void scrollToBottom() {
         mScrollView.post(new Runnable() {
             public void run() {
-                mScrollView.smoothScrollTo(0, mText.getBottom());
+                mScrollView.smoothScrollTo(0, mOutput.getBottom());
             }
         });
     }
